@@ -1,11 +1,28 @@
 workflows:
   android-workflow:
     name: MOR Android Build
+    max_build_duration: 60
     instance_type: mac_mini_m2
     environment:
       flutter: 3.19.0
+      groups:
+        - firebase_credentials
     scripts:
-      - name: Build APK
+      - name: Setup Firebase Check
+        script: |
+          mkdir -p android/app
+          echo "Checking variable..."
+          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+            echo "❌ VARIABLE IS EMPTY - Group not linked!"
+            echo "Make sure group 'firebase_credentials' is selected in UI"
+            exit 1
+          else
+            echo "✅ VARIABLE FOUND - length: ${#GOOGLE_SERVICES_JSON}"
+            echo $GOOGLE_SERVICES_JSON | base64 --decode > android/app/google-services.json
+            echo "✅ JSON created:"
+            ls -lh android/app/google-services.json
+          fi
+      - name: Build
         script: |
           flutter create . --platforms=android --project-name megaoverflow_radio
           flutter pub get
