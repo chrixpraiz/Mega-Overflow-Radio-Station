@@ -7,23 +7,24 @@ workflows:
       flutter: stable
       java: 17
     scripts:
-      - name: Fix Flutter structure
+      - name: Fix Flutter Structure
         script: |
           ls -la
-          # Create proper Flutter structure if main.dart at root
-          if [ -f main.dart ]; then
-            mkdir -p lib
-            cp main.dart lib/main.dart
-          fi
-          if [ -f pubspec.yaml ]; then
-            cat pubspec.yaml
-          fi
+          echo "=== pubspec.yaml ==="
+          cat pubspec.yaml
+          # Backup your main.dart
+          cp main.dart /tmp/my_main.dart || cp lib/main.dart /tmp/my_main.dart
+          # Create proper Flutter project - generates android folder
+          flutter create . --platforms=android --project-name megaoverflowradio
+          # Restore your code
+          cp /tmp/my_main.dart lib/main.dart
+          echo "=== Restored main.dart ==="
+          ls -la android/app/
       - name: Get packages
         script: |
           flutter pub get
       - name: Build APK
         script: |
-          flutter build apk --debug --verbose
+          flutter build apk --release --verbose
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
-      - build/app/outputs/**/*.apk
