@@ -17,7 +17,9 @@ workflows:
           npm install
       - name: Fix Gradle
         script: |
-          sed -i '' 's/gradle-.*-bin.zip/gradle-8.12.1-bin.zip/' android/gradle/wrapper/gradle-wrapper.properties
+          if [ -f android/gradle/wrapper/gradle-wrapper.properties ]; then
+            sed -i '' 's/gradle-.*-bin.zip/gradle-8.12.1-bin.zip/' android/gradle/wrapper/gradle-wrapper.properties
+          fi
       - name: Build APK
         script: |
           cd android && ./gradlew assembleDebug
@@ -32,13 +34,23 @@ workflows:
       flutter: stable
       java: 17
     scripts:
-      - name: Get Flutter packages
+      - name: Fix Flutter structure
         script: |
-          cd flutter_app
+          ls -la
+          # Create proper Flutter structure if main.dart at root
+          if [ -f main.dart ]; then
+            mkdir -p lib
+            cp main.dart lib/main.dart
+          fi
+          if [ -f pubspec.yaml ]; then
+            cat pubspec.yaml
+          fi
+      - name: Get packages
+        script: |
           flutter pub get
       - name: Build APK
         script: |
-          cd flutter_app
-          flutter build apk --debug
+          flutter build apk --debug --verbose
     artifacts:
-      - flutter_app/build/app/outputs/flutter-apk/*.apk
+      - build/app/outputs/flutter-apk/*.apk
+      - build/app/outputs/**/*.apk
