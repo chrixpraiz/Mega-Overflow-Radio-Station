@@ -1,31 +1,44 @@
 workflows:
-  android-workflow:
-    name: MOR Android Build
+  react-native-android:
+    name: MOR React Native Build
     max_build_duration: 60
     instance_type: mac_mini_m2
     environment:
-      flutter: 3.19.0
-      groups:
-        - firebase_credentials
+      node: 22.13.0
+      java: 17
     scripts:
-      - name: Setup Firebase Check
+      - name: Install
         script: |
-          mkdir -p android/app
-          echo "Checking variable..."
-          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
-            echo "❌ VARIABLE IS EMPTY - Group not linked!"
-            echo "Make sure group 'firebase_credentials' is selected in UI"
-            exit 1
-          else
-            echo "✅ VARIABLE FOUND - length: ${#GOOGLE_SERVICES_JSON}"
-            echo $GOOGLE_SERVICES_JSON | base64 --decode > android/app/google-services.json
-            echo "✅ JSON created:"
-            ls -lh android/app/google-services.json
-          fi
-      - name: Build
+          npm install
+          npm install expo
+      - name: Generate Android
         script: |
-          flutter create . --platforms=android --project-name megaoverflow_radio
-          flutter pub get
-          flutter build apk --debug --no-tree-shake-icons
+          echo "y" | npx expo prebuild --platform android --clean
+          npm install
+      - name: Fix Gradle
+        script: |
+          sed -i '' 's/gradle-.*-bin.zip/gradle-8.12.1-bin.zip/' android/gradle/wrapper/gradle-wrapper.properties
+      - name: Build APK
+        script: |
+          cd android && ./gradlew assembleDebug
     artifacts:
-      - build/**/outputs/**/*.apk
+      - android/app/build/outputs/**/*.apk
+
+  flutter-android:
+    name: MOR Flutter Build
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+      java: 17
+    scripts:
+      - name: Get Flutter packages
+        script: |
+          cd flutter_app
+          flutter pub get
+      - name: Build APK
+        script: |
+          cd flutter_app
+          flutter build apk --debug
+    artifacts:
+      - flutter_app/build/app/outputs/flutter-apk/*.apk
