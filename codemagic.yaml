@@ -1,31 +1,4 @@
 workflows:
-  react-native-android:
-    name: MOR React Native Build
-    max_build_duration: 60
-    instance_type: mac_mini_m2
-    environment:
-      node: 22.13.0
-      java: 17
-    scripts:
-      - name: Install
-        script: |
-          npm install
-          npm install expo
-      - name: Generate Android
-        script: |
-          echo "y" | npx expo prebuild --platform android --clean
-          npm install
-      - name: Fix Gradle
-        script: |
-          if [ -f android/gradle/wrapper/gradle-wrapper.properties ]; then
-            sed -i '' 's/gradle-.*-bin.zip/gradle-8.12.1-bin.zip/' android/gradle/wrapper/gradle-wrapper.properties
-          fi
-      - name: Build APK
-        script: |
-          cd android && ./gradlew assembleDebug
-    artifacts:
-      - android/app/build/outputs/**/*.apk
-
   flutter-android:
     name: MOR Flutter Build
     max_build_duration: 60
