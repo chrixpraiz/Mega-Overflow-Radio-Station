@@ -1,29 +1,14 @@
 workflows:
   android-workflow:
     name: MOR Android Build
-    max_build_duration: 60
     instance_type: mac_mini_m2
     environment:
       flutter: 3.19.0
     scripts:
-      - name: Create Android structure
+      - name: Build APK
         script: |
-          mkdir -p android/app/src/main
           flutter create . --platforms=android --project-name megaoverflow_radio
-      - name: Set up google-services.json
-        script: |
-          mkdir -p android/app
-          if [ ! -z "$GOOGLE_SERVICES_JSON" ]; then
-            echo $GOOGLE_SERVICES_JSON | base64 --decode > android/app/google-services.json
-            echo "google-services.json created"
-          else
-            echo "No GOOGLE_SERVICES_JSON - building without Firebase for now"
-          fi
-      - name: Get Flutter packages
-        script: |
-          flutter packages pub get
-      - name: Build APK Debug (without Firebase)
-        script: |
+          flutter pub get
           flutter build apk --debug --no-tree-shake-icons
     artifacts:
       - build/**/outputs/**/*.apk
