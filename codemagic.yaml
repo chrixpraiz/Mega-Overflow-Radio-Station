@@ -1,23 +1,32 @@
 workflows:
   flutter-android:
-    name: MOR Flutter Build
+    name: MOR Flutter Build v4
     max_build_duration: 60
     instance_type: mac_mini_m2
     environment:
       flutter: 3.24.5
       java: 17
     scripts:
-      - name: Fix Structure + Gradle
+      - name: Fix Structure
         script: |
           cp main.dart /tmp/my_main.dart || cp lib/main.dart /tmp/my_main.dart
           flutter create . --platforms=android --project-name megaoverflowradio
           cp /tmp/my_main.dart lib/main.dart
           echo "distributionUrl=https\://services.gradle.org/distributions/gradle-8.7-all.zip" > android/gradle/wrapper/gradle-wrapper.properties
-      - name: Clean & Get
+          # Create empty assets if missing - prevents build fail
+          mkdir -p assets/icon assets/images
+          touch assets/icon/.keep assets/images/.keep
+      - name: Check Firebase file
+        script: |
+          ls -la android/app/ || true
+          if [ ! -f android/app/google-services.json ]; then
+            echo "⚠️ WARNING: google-services.json NOT FOUND! App will crash on Firebase init"
+          fi
+      - name: Get packages
         script: |
           flutter clean
           flutter pub get
-      - name: Build APK
+      - name: Build Release APK
         script: |
           flutter build apk --release
     artifacts:
