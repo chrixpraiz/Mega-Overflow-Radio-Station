@@ -1,42 +1,48 @@
 workflows:
   flutter-android:
-    name: MOR Flutter Build v4 - minSdk 23 fix
+    name: MOR Flutter - FORCED minSdk 23
     max_build_duration: 60
     instance_type: mac_mini_m2
     environment:
       flutter: 3.24.5
       java: 17
     scripts:
-      - name: Fix Structure + minSdk 23
+      - name: Fix Structure + FORCE minSdk 23
         script: |
           cp main.dart /tmp/my_main.dart || cp lib/main.dart /tmp/my_main.dart
+          rm -rf android
           flutter create . --platforms=android --project-name megaoverflowradio
           cp /tmp/my_main.dart lib/main.dart
-          echo "distributionUrl=https\://services.gradle.org/distributions/gradle-8.7-all.zip" > android/gradle/wrapper/gradle-wrapper.properties
           mkdir -p assets/icon assets/images
           touch assets/icon/.keep assets/images/.keep
-          # FIX: Set minSdkVersion 23 for Firebase Auth
-          echo "Fixing minSdkVersion..."
-          sed -i '' 's/minSdkVersion 21/minSdkVersion 23/g' android/app/build.gradle || true
-          sed -i '' 's/minSdk 21/minSdk 23/g' android/app/build.gradle || true
-          sed -i '' 's/flutter.minSdkVersion/flutter.minSdkVersion/' android/app/build.gradle || true
-          # For new Flutter format (local.properties)
-          sed -i '' 's/flutter.minSdkVersion=21/flutter.minSdkVersion=23/' android/local.properties || true
-          # Also patch app/build.gradle to force 23
-          if grep -q "minSdk" android/app/build.gradle; then
-            echo "minSdk already set"
-          else
-            echo "Adding minSdk manually"
+          echo "distributionUrl=https\://services.gradle.org/distributions/gradle-8.7-all.zip" > android/gradle/wrapper/gradle-wrapper.properties
+          
+          echo "=== BEFORE ==="
+          cat android/local.properties
+          cat android/app/build.gradle | grep -i minsdk
+          
+          # FORCE 23 in local.properties
+          sed -i '' 's/flutter.minSdkVersion=.*/flutter.minSdkVersion=23/' android/local.properties
+          # If not exist, add it
+          if ! grep -q "flutter.minSdkVersion" android/local.properties; then
+            echo "flutter.minSdkVersion=23" >> android/local.properties
           fi
-          cat android/app/build.gradle | grep -A2 -B2 minSdk
-          # Direct replace in android/app/build.gradle
-          awk '{if(/minSdk/) gsub(/21/, "23"); print}' android/app/build.gradle > /tmp/build.gradle && mv /tmp/build.gradle android/app/build.gradle
-          cat android/app/build.gradle | grep minSdk
+          
+          # ALSO force in app/build.gradle directly to 23
+          sed -i '' 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 23/' android/app/build.gradle
+          sed -i '' 's/minSdk flutter.minSdkVersion/minSdk 23/' android/app/build.gradle
+          sed -i '' 's/minSdkVersion 21/minSdkVersion 23/' android/app/build.gradle
+          sed -i '' 's/minSdk 21/minSdk 23/' android/app/build.gradle
+          
+          echo "=== AFTER ==="
+          cat android/local.properties
+          cat android/app/build.gradle | grep -i minsdk
+          
       - name: Get packages
         script: |
           flutter clean
           flutter pub get
-      - name: Build Release APK
+      - name: Build APK
         script: |
           flutter build apk --release
     artifacts:
