@@ -1,21 +1,21 @@
-﻿name: megaoverflow_radio
+name: megaoverflow_radio
 description: MegaOverflow Radio - 24/7 Gospel
 publish_to: 'none'
 version: 1.0.0+1
 environment:
-  sdk: ">=3.0.0 <4.0.0"
+  sdk: ">=3.2.0 <4.0.0"
 dependencies:
   flutter:
     sdk: flutter
-  just_audio: ^0.9.36
-  just_audio_background: ^0.0.1-beta.11
-  google_fonts: ^6.1.0
-  firebase_core: ^2.24.0
-  firebase_auth: ^4.12.0
-  cloud_firestore: ^4.15.0
-  firebase_storage: ^11.6.0
-  url_launcher: ^6.2.2
-  google_mobile_ads: ^4.0.0
+  just_audio: ^0.9.46
+  just_audio_background: ^0.0.1-beta.13
+  google_fonts: ^6.2.1
+  firebase_core: ^2.32.0
+  firebase_auth: ^4.20.0
+  cloud_firestore: ^4.17.0
+  firebase_storage: ^11.7.0
+  url_launcher: ^6.2.5
+  google_mobile_ads: ^5.2.0
 flutter:
   uses-material-design: true
   assets:
