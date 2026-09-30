@@ -1,66 +1,40 @@
 ﻿workflows:
   flutter-android:
-    name: MOR - V2 Embedding Fix
+    name: MOR - Fix Stream
     max_build_duration: 60
     instance_type: mac_mini_m2
     environment:
       flutter: 3.24.5
       java: 17
     scripts:
-      - name: Fix Android V1 -> V2
+      - name: Fix Android + Stream
         script: |
-          echo "Backing up lib/main.dart"
-          cp lib/main.dart /tmp/my_main.dart 2>/dev/null || cp main.dart /tmp/my_main.dart
-          cp pubspec.yaml /tmp/pubspec.yaml
-          
-          echo "Recreating android with V2 embedding"
+          cp lib/main.dart /tmp/my_main.dart
           rm -rf android
           flutter create . --platforms=android --project-name megaoverflowradio --org com.megaoverflow
-          
-          echo "Restoring your files"
           cp /tmp/my_main.dart lib/main.dart
-          cp /tmp/pubspec.yaml pubspec.yaml 2>/dev/null || true
-          cp /tmp/my_main.dart main.dart 2>/dev/null || true
-          
+          cp /tmp/my_main.dart main.dart
           mkdir -p assets/icon assets/images
-          
-          # Fix minSdk and gradle
-          echo "distributionUrl=https\://services.gradle.org/distributions/gradle-8.7-all.zip" > android/gradle/wrapper/gradle-wrapper.properties
           python3 << 'PY'
-          import pathlib, re
-          # Ensure V2 embedding - fix gradle
-          bg = pathlib.Path("android/app/build.gradle")
-          if bg.exists():
-              txt = bg.read_text()
-              txt = txt.replace('flutter.minSdkVersion', '23')
-              txt = re.sub(r'(minSdk[^0-9]*)\d+', r'\g<1>23', txt)
-              bg.write_text(txt)
-          # Write clean V2 manifest with REAL AdMob
+          import pathlib
           manifest = """<manifest xmlns:android="http://schemas.android.com/apk/res/android">
               <uses-permission android:name="android.permission.INTERNET"/>
               <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
-              <application android:label="MegaOverflow Radio" android:name="APP_NAME_PLACEHOLDER" android:icon="@mipmap/launcher_icon">
+              <application android:label="MegaOverflow Radio" android:name="${applicationName}" android:icon="@mipmap/launcher_icon" android:usesCleartextTraffic="true">
                   <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop" android:theme="@style/LaunchTheme" android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode" android:hardwareAccelerated="true" android:windowSoftInputMode="adjustResize">
                       <meta-data android:name="io.flutter.embedding.android.NormalTheme" android:resource="@style/NormalTheme"/>
-                      <intent-filter android:autoVerify="true">
-                          <action android:name="android.intent.action.MAIN"/>
-                          <category android:name="android.intent.category.LAUNCHER"/>
-                      </intent-filter>
+                      <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
                   </activity>
                   <meta-data android:name="flutterEmbedding" android:value="2"/>
                   <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-1383337037822798~9185411751"/>
               </application>
           </manifest>"""
-          manifest = manifest.replace("APP_NAME_PLACEHOLDER", "${applicationName}")
           pathlib.Path("android/app/src/main/AndroidManifest.xml").write_text(manifest)
-          print("V2 Manifest written")
+          print("Manifest with usesCleartextTraffic")
           PY
-          
           flutter pub get
           dart run flutter_launcher_icons || true
-          flutter clean
-          
       - name: Build APK
-        script: flutter build apk --release --verbose
+        script: flutter build apk --release
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
