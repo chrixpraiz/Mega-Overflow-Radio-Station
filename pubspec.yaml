@@ -1,4 +1,4 @@
-name: megaoverflow_radio
+﻿name: megaoverflow_radio
 description: MegaOverflow Radio - 24/7 Gospel
 publish_to: 'none'
 version: 1.0.0+1
@@ -16,8 +16,15 @@ dependencies:
   firebase_storage: ^12.3.4
   url_launcher: ^6.2.5
   google_mobile_ads: ^5.2.0
+dev_dependencies:
+  flutter_launcher_icons: ^0.13.1
 flutter:
   uses-material-design: true
   assets:
     - assets/icon/
     - assets/images/
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: false
+  image_path: "assets/icon/app_icon.png"
+  min_sdk_android: 21

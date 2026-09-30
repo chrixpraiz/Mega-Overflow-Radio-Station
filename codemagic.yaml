@@ -1,64 +1,49 @@
-workflows:
+﻿workflows:
   flutter-android:
-    name: MOR - FINAL minSdk FIX
+    name: MOR - FINAL Icon + AdMob
     max_build_duration: 60
     instance_type: mac_mini_m2
     environment:
       flutter: 3.24.5
       java: 17
     scripts:
-      - name: Fix Structure + PYTHON FORCE 23
+      - name: Fix + Build Icon
         script: |
           cp main.dart /tmp/my_main.dart || cp lib/main.dart /tmp/my_main.dart
           rm -rf android
           flutter create . --platforms=android --project-name megaoverflowradio
           cp /tmp/my_main.dart lib/main.dart
           mkdir -p assets/icon assets/images
-          touch assets/icon/.keep assets/images/.keep
+          cp assets/icon/app_icon.png assets/icon/app_icon.png 2>/dev/null || true
+          touch assets/images/.keep
           echo "distributionUrl=https\://services.gradle.org/distributions/gradle-8.7-all.zip" > android/gradle/wrapper/gradle-wrapper.properties
-          
-          # PYTHON: force minSdk 23 everywhere
           python3 << 'PY'
           import pathlib, re
-          # 1. local.properties
           lp = pathlib.Path("android/local.properties")
           txt = lp.read_text()
           txt = re.sub(r'flutter\.minSdkVersion=.*', 'flutter.minSdkVersion=23', txt)
           if 'flutter.minSdkVersion' not in txt:
               txt += '\nflutter.minSdkVersion=23\n'
           lp.write_text(txt)
-          print("local.properties fixed:")
-          print(txt)
-          
-          # 2. app/build.gradle - replace ANY minSdk line with 23
           bg = pathlib.Path("android/app/build.gradle")
           bgt = bg.read_text()
-          # replace flutter.minSdkVersion -> 23
           bgt = bgt.replace('flutter.minSdkVersion', '23')
-          bgt = re.sub(r'minSdkVersion\s+21', 'minSdkVersion 23', bgt)
-          bgt = re.sub(r'minSdk\s*=\s*21', 'minSdk = 23', bgt)
-          bgt = re.sub(r'minSdk\s+21', 'minSdk 23', bgt)
-          bgt = re.sub(r'minSdkVersion\s+.*\n', '        minSdkVersion 23\n', bgt) if 'minSdkVersion 21' in bgt else bgt
-          # Ensure if still contains 21, force 23
           bgt = re.sub(r'(minSdk[^0-9]*)\d+', r'\g<1>23', bgt)
           bg.write_text(bgt)
-          print("\nbuild.gradle fixed:")
-          for line in bgt.split('\n'):
-              if 'minSdk' in line or 'SdkVersion' in line:
-                  print(line)
           PY
-          
-          echo "=== VERIFY ==="
-          cat android/local.properties | grep minSdk
-          cat android/app/build.gradle | grep -i minSdk
-          
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          if ! grep -q "com.google.android.gms.ads.APPLICATION_ID" "\"; then
+            sed -i '' 's|</application>|    <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-3940256099942544~3347511713"/> \n    </application>|' "\"
+          fi
+          ls -lh assets/icon/app_icon.png
+          flutter pub get
+          dart run flutter_launcher_icons || true
       - name: Get packages
         script: |
           flutter clean
           flutter pub get
       - name: Build APK
         script: |
-          flutter build apk --release --verbose 2>&1 | tail -100
           flutter build apk --release
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
