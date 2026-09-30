@@ -1,6 +1,6 @@
 ﻿workflows:
   flutter-android:
-    name: MOR - REAL AdMob ID FIXED
+    name: MOR - KEEP LIB
     max_build_duration: 60
     instance_type: mac_mini_m2
     environment:
@@ -9,10 +9,8 @@
     scripts:
       - name: Fix + Build Icon
         script: |
-          cp main.dart /tmp/my_main.dart 2>/dev/null || cp lib/main.dart /tmp/my_main.dart
-          rm -rf android
-          flutter create . --platforms=android --project-name megaoverflowradio
-          cp /tmp/my_main.dart lib/main.dart
+          # DO NOT delete lib - keep your working main.dart
+          if [ -f "main.dart" ]; then cp main.dart lib/main.dart; fi
           mkdir -p assets/icon assets/images
           ls -lh assets/icon/app_icon.png
           echo "distributionUrl=https\://services.gradle.org/distributions/gradle-8.7-all.zip" > android/gradle/wrapper/gradle-wrapper.properties
@@ -22,8 +20,7 @@
           if lp.exists():
               txt = lp.read_text()
               txt = re.sub(r'flutter\.minSdkVersion=.*', 'flutter.minSdkVersion=23', txt)
-              if 'flutter.minSdkVersion' not in txt:
-                  txt += '\nflutter.minSdkVersion=23\n'
+              if 'flutter.minSdkVersion' not in txt: txt += '\nflutter.minSdkVersion=23\n'
               lp.write_text(txt)
           bg = pathlib.Path("android/app/build.gradle")
           if bg.exists():
@@ -31,7 +28,6 @@
               bgt = bgt.replace('flutter.minSdkVersion', '23')
               bgt = re.sub(r'(minSdk[^0-9]*)\d+', r'\g<1>23', bgt)
               bg.write_text(bgt)
-          # Use $$ to avoid bash expansion, then replace
           manifest_content = """<manifest xmlns:android="http://schemas.android.com/apk/res/android">
               <uses-permission android:name="android.permission.INTERNET"/>
               <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
@@ -46,12 +42,10 @@
           </manifest>"""
           manifest_content = manifest_content.replace("$$APP_NAME$$", "${applicationName}")
           pathlib.Path("android/app/src/main/AndroidManifest.xml").write_text(manifest_content)
-          print("Manifest FIXED with real ID")
+          print("Manifest fixed")
           PY
           flutter pub get
           dart run flutter_launcher_icons || true
-      - name: Packages
-        script: flutter pub get
       - name: Build APK
         script: flutter build apk --release
     artifacts:
