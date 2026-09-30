@@ -1,13 +1,13 @@
 workflows:
   flutter-android:
-    name: MOR Flutter - FORCED minSdk 23
+    name: MOR - FINAL minSdk FIX
     max_build_duration: 60
     instance_type: mac_mini_m2
     environment:
       flutter: 3.24.5
       java: 17
     scripts:
-      - name: Fix Structure + FORCE minSdk 23
+      - name: Fix Structure + PYTHON FORCE 23
         script: |
           cp main.dart /tmp/my_main.dart || cp lib/main.dart /tmp/my_main.dart
           rm -rf android
@@ -17,26 +17,40 @@ workflows:
           touch assets/icon/.keep assets/images/.keep
           echo "distributionUrl=https\://services.gradle.org/distributions/gradle-8.7-all.zip" > android/gradle/wrapper/gradle-wrapper.properties
           
-          echo "=== BEFORE ==="
-          cat android/local.properties
-          cat android/app/build.gradle | grep -i minsdk
+          # PYTHON: force minSdk 23 everywhere
+          python3 << 'PY'
+          import pathlib, re
+          # 1. local.properties
+          lp = pathlib.Path("android/local.properties")
+          txt = lp.read_text()
+          txt = re.sub(r'flutter\.minSdkVersion=.*', 'flutter.minSdkVersion=23', txt)
+          if 'flutter.minSdkVersion' not in txt:
+              txt += '\nflutter.minSdkVersion=23\n'
+          lp.write_text(txt)
+          print("local.properties fixed:")
+          print(txt)
           
-          # FORCE 23 in local.properties
-          sed -i '' 's/flutter.minSdkVersion=.*/flutter.minSdkVersion=23/' android/local.properties
-          # If not exist, add it
-          if ! grep -q "flutter.minSdkVersion" android/local.properties; then
-            echo "flutter.minSdkVersion=23" >> android/local.properties
-          fi
+          # 2. app/build.gradle - replace ANY minSdk line with 23
+          bg = pathlib.Path("android/app/build.gradle")
+          bgt = bg.read_text()
+          # replace flutter.minSdkVersion -> 23
+          bgt = bgt.replace('flutter.minSdkVersion', '23')
+          bgt = re.sub(r'minSdkVersion\s+21', 'minSdkVersion 23', bgt)
+          bgt = re.sub(r'minSdk\s*=\s*21', 'minSdk = 23', bgt)
+          bgt = re.sub(r'minSdk\s+21', 'minSdk 23', bgt)
+          bgt = re.sub(r'minSdkVersion\s+.*\n', '        minSdkVersion 23\n', bgt) if 'minSdkVersion 21' in bgt else bgt
+          # Ensure if still contains 21, force 23
+          bgt = re.sub(r'(minSdk[^0-9]*)\d+', r'\g<1>23', bgt)
+          bg.write_text(bgt)
+          print("\nbuild.gradle fixed:")
+          for line in bgt.split('\n'):
+              if 'minSdk' in line or 'SdkVersion' in line:
+                  print(line)
+          PY
           
-          # ALSO force in app/build.gradle directly to 23
-          sed -i '' 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 23/' android/app/build.gradle
-          sed -i '' 's/minSdk flutter.minSdkVersion/minSdk 23/' android/app/build.gradle
-          sed -i '' 's/minSdkVersion 21/minSdkVersion 23/' android/app/build.gradle
-          sed -i '' 's/minSdk 21/minSdk 23/' android/app/build.gradle
-          
-          echo "=== AFTER ==="
-          cat android/local.properties
-          cat android/app/build.gradle | grep -i minsdk
+          echo "=== VERIFY ==="
+          cat android/local.properties | grep minSdk
+          cat android/app/build.gradle | grep -i minSdk
           
       - name: Get packages
         script: |
@@ -44,6 +58,7 @@ workflows:
           flutter pub get
       - name: Build APK
         script: |
+          flutter build apk --release --verbose 2>&1 | tail -100
           flutter build apk --release
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
