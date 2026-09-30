@@ -1,4 +1,4 @@
-﻿workflows:
+workflows:
   flutter-android:
     name: MOR - FINAL Icon + AdMob
     max_build_duration: 60
@@ -33,7 +33,7 @@
           PY
           MANIFEST="android/app/src/main/AndroidManifest.xml"
           if ! grep -q "com.google.android.gms.ads.APPLICATION_ID" "\"; then
-            sed -i '' 's|</application>|    <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-3940256099942544~3347511713"/> \n    </application>|' "\"
+            sed -i '' 's|</application>|    <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-1383337037822798~9185411751"/> \n    </application>|' "\"
           fi
           ls -lh assets/icon/app_icon.png
           flutter pub get
