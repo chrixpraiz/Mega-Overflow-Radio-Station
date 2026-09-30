@@ -1,6 +1,6 @@
-workflows:
+﻿workflows:
   flutter-android:
-    name: MOR - FINAL Icon + AdMob
+    name: MOR - REAL AdMob ID
     max_build_duration: 60
     instance_type: mac_mini_m2
     environment:
@@ -9,41 +9,52 @@ workflows:
     scripts:
       - name: Fix + Build Icon
         script: |
-          cp main.dart /tmp/my_main.dart || cp lib/main.dart /tmp/my_main.dart
+          cp main.dart /tmp/my_main.dart 2>/dev/null || cp lib/main.dart /tmp/my_main.dart
           rm -rf android
           flutter create . --platforms=android --project-name megaoverflowradio
           cp /tmp/my_main.dart lib/main.dart
           mkdir -p assets/icon assets/images
-          cp assets/icon/app_icon.png assets/icon/app_icon.png 2>/dev/null || true
-          touch assets/images/.keep
+          ls -lh assets/icon/app_icon.png || echo "Icon missing - will copy"
+          # Try copy from backup location if needed
+          cp /Users/builder/clone/assets/icon/app_icon.png assets/icon/app_icon.png 2>/dev/null || true
           echo "distributionUrl=https\://services.gradle.org/distributions/gradle-8.7-all.zip" > android/gradle/wrapper/gradle-wrapper.properties
           python3 << 'PY'
           import pathlib, re
+          # Fix minSdk
           lp = pathlib.Path("android/local.properties")
-          txt = lp.read_text()
-          txt = re.sub(r'flutter\.minSdkVersion=.*', 'flutter.minSdkVersion=23', txt)
-          if 'flutter.minSdkVersion' not in txt:
-              txt += '\nflutter.minSdkVersion=23\n'
-          lp.write_text(txt)
+          if lp.exists():
+              txt = lp.read_text()
+              txt = re.sub(r'flutter\.minSdkVersion=.*', 'flutter.minSdkVersion=23', txt)
+              if 'flutter.minSdkVersion' not in txt:
+                  txt += '\nflutter.minSdkVersion=23\n'
+              lp.write_text(txt)
           bg = pathlib.Path("android/app/build.gradle")
-          bgt = bg.read_text()
-          bgt = bgt.replace('flutter.minSdkVersion', '23')
-          bgt = re.sub(r'(minSdk[^0-9]*)\d+', r'\g<1>23', bgt)
-          bg.write_text(bgt)
+          if bg.exists():
+              bgt = bg.read_text()
+              bgt = bgt.replace('flutter.minSdkVersion', '23')
+              bgt = re.sub(r'(minSdk[^0-9]*)\d+', r'\g<1>23', bgt)
+              bg.write_text(bgt)
+          # Write REAL manifest
+          manifest = '''<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <uses-permission android:name="android.permission.INTERNET"/>
+              <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+              <application android:label="MegaOverflow Radio" android:name="" android:icon="@mipmap/launcher_icon">
+                  <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop" android:theme="@style/LaunchTheme" android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode" android:hardwareAccelerated="true" android:windowSoftInputMode="adjustResize">
+                      <meta-data android:name="io.flutter.embedding.android.NormalTheme" android:resource="@style/NormalTheme"/>
+                      <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
+                  </activity>
+                  <meta-data android:name="flutterEmbedding" android:value="2"/>
+                  <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-1383337037822798~9185411751"/>
+              </application>
+          </manifest>'''
+          pathlib.Path("android/app/src/main/AndroidManifest.xml").write_text(manifest)
+          print("Manifest with REAL AdMob ID written")
           PY
-          MANIFEST="android/app/src/main/AndroidManifest.xml"
-          if ! grep -q "com.google.android.gms.ads.APPLICATION_ID" "\"; then
-            sed -i '' 's|</application>|    <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-1383337037822798~9185411751"/> \n    </application>|' "\"
-          fi
-          ls -lh assets/icon/app_icon.png
           flutter pub get
           dart run flutter_launcher_icons || true
-      - name: Get packages
-        script: |
-          flutter clean
-          flutter pub get
+      - name: Packages
+        script: flutter pub get
       - name: Build APK
-        script: |
-          flutter build apk --release
+        script: flutter build apk --release
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
