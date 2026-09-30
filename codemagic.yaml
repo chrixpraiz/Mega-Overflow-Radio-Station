@@ -1,27 +1,37 @@
 workflows:
   flutter-android:
-    name: MOR Flutter Build v4
+    name: MOR Flutter Build v4 - minSdk 23 fix
     max_build_duration: 60
     instance_type: mac_mini_m2
     environment:
       flutter: 3.24.5
       java: 17
     scripts:
-      - name: Fix Structure
+      - name: Fix Structure + minSdk 23
         script: |
           cp main.dart /tmp/my_main.dart || cp lib/main.dart /tmp/my_main.dart
           flutter create . --platforms=android --project-name megaoverflowradio
           cp /tmp/my_main.dart lib/main.dart
           echo "distributionUrl=https\://services.gradle.org/distributions/gradle-8.7-all.zip" > android/gradle/wrapper/gradle-wrapper.properties
-          # Create empty assets if missing - prevents build fail
           mkdir -p assets/icon assets/images
           touch assets/icon/.keep assets/images/.keep
-      - name: Check Firebase file
-        script: |
-          ls -la android/app/ || true
-          if [ ! -f android/app/google-services.json ]; then
-            echo "⚠️ WARNING: google-services.json NOT FOUND! App will crash on Firebase init"
+          # FIX: Set minSdkVersion 23 for Firebase Auth
+          echo "Fixing minSdkVersion..."
+          sed -i '' 's/minSdkVersion 21/minSdkVersion 23/g' android/app/build.gradle || true
+          sed -i '' 's/minSdk 21/minSdk 23/g' android/app/build.gradle || true
+          sed -i '' 's/flutter.minSdkVersion/flutter.minSdkVersion/' android/app/build.gradle || true
+          # For new Flutter format (local.properties)
+          sed -i '' 's/flutter.minSdkVersion=21/flutter.minSdkVersion=23/' android/local.properties || true
+          # Also patch app/build.gradle to force 23
+          if grep -q "minSdk" android/app/build.gradle; then
+            echo "minSdk already set"
+          else
+            echo "Adding minSdk manually"
           fi
+          cat android/app/build.gradle | grep -A2 -B2 minSdk
+          # Direct replace in android/app/build.gradle
+          awk '{if(/minSdk/) gsub(/21/, "23"); print}' android/app/build.gradle > /tmp/build.gradle && mv /tmp/build.gradle android/app/build.gradle
+          cat android/app/build.gradle | grep minSdk
       - name: Get packages
         script: |
           flutter clean
