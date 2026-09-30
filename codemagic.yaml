@@ -4,27 +4,21 @@ workflows:
     max_build_duration: 60
     instance_type: mac_mini_m2
     environment:
-      flutter: stable
+      flutter: 3.24.5
       java: 17
     scripts:
-      - name: Fix Flutter Structure
+      - name: Fix Structure + Gradle
         script: |
-          ls -la
-          echo "=== pubspec.yaml ==="
-          cat pubspec.yaml
-          # Backup your main.dart
           cp main.dart /tmp/my_main.dart || cp lib/main.dart /tmp/my_main.dart
-          # Create proper Flutter project - generates android folder
           flutter create . --platforms=android --project-name megaoverflowradio
-          # Restore your code
           cp /tmp/my_main.dart lib/main.dart
-          echo "=== Restored main.dart ==="
-          ls -la android/app/
-      - name: Get packages
+          echo "distributionUrl=https\://services.gradle.org/distributions/gradle-8.7-all.zip" > android/gradle/wrapper/gradle-wrapper.properties
+      - name: Clean & Get
         script: |
+          flutter clean
           flutter pub get
       - name: Build APK
         script: |
-          flutter build apk --release --verbose
+          flutter build apk --release
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
